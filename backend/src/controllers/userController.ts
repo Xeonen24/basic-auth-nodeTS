@@ -2,13 +2,18 @@ import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/user";
-import emailValidator = require("emailvalid");
+import { isValidEmail } from "../utils/emailValidator";
 
 export const registerNew = async (req: Request, res: Response) => {
   try {
     const { username, email, password } = req.body;
-    if (!username || !password || !email) return res.status(400).json({ message: "Please enter all fields" });
-    if (!emailValidator(email)) return res.status(400).json({ message: "Invalid email address" });
+    if (!username || !password || !email) {
+      return res.status(400).json({ message: "Please enter all fields" });
+    }
+
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ message: "Invalid email format" });
+    }
 
     const userexist = await User.findOne({ email });
     if (userexist) return res.status(400).json({ message: "User already exists" });
@@ -31,7 +36,7 @@ export const registerNew = async (req: Request, res: Response) => {
 export const login = async (req: Request, res: Response) => {
   try {
     const { username, password } = req.body;
-    if (!username || !password) return res.status(400).json({ message: "Please enter all fields" });
+    if (!username || !password) return res.status(400).json({ message: "Please enter username and password" });
 
     const user = await User.findOne({ username });
     if (!user) return res.status(404).json({ message: "User not found" });
@@ -52,10 +57,10 @@ export const login = async (req: Request, res: Response) => {
 
 export const getUser = async (req: Request & { user?: any }, res: Response) => {
   try {
-    const user = await User.findById(req.user);
+    const user = await User.findById(req.user).select("-password -__v");
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    res.status(200).json({ user });
+    res.status(200).json(user);
   } catch (error) {
     res.status(500).json({ error });
   }
@@ -70,7 +75,6 @@ export const updateUser = async (req: Request & { user?: any }, res: Response) =
 
     if (name) user.username = name;
     if (email) {
-      if (!emailValidator(email)) return res.status(400).json({ message: "Invalid email address" });
       user.email = email;
     }
     if (password) user.password = await bcrypt.hash(password, 16);

@@ -6,7 +6,7 @@ const router = Router();
 
 router.post("/register", registerNew);
 router.post("/login", login);
-router.get("/user", auth, getUser);
+router.get("/", auth, getUser);
 router.put("/updateProfile", auth, updateUser);
 
 export default router;
