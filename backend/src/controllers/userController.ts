@@ -2,12 +2,13 @@ import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/user";
-import type { IUser } from "../types";
+import emailValidator = require("emailvalid");
 
 export const registerNew = async (req: Request, res: Response) => {
   try {
     const { username, email, password } = req.body;
-    if (!username || !password) return res.status(400).json({ message: "Please enter all fields" });
+    if (!username || !password || !email) return res.status(400).json({ message: "Please enter all fields" });
+    if (!emailValidator(email)) return res.status(400).json({ message: "Invalid email address" });
 
     const userexist = await User.findOne({ email });
     if (userexist) return res.status(400).json({ message: "User already exists" });
@@ -68,7 +69,10 @@ export const updateUser = async (req: Request & { user?: any }, res: Response) =
     if (!user) return res.status(404).json({ message: "User not found" });
 
     if (name) user.username = name;
-    if (email) user.email = email;
+    if (email) {
+      if (!emailValidator(email)) return res.status(400).json({ message: "Invalid email address" });
+      user.email = email;
+    }
     if (password) user.password = await bcrypt.hash(password, 16);
 
     await user.save();
